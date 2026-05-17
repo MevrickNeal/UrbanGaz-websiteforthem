@@ -287,7 +287,7 @@ h2{font-size:clamp(32px,4vw,54px);font-weight:800;line-height:1.1;margin-bottom:
   filter:blur(16px);
 }
 .app-phone-img{
-  max-width:960px;width:100%;
+  max-width:640px;width:100%;
   object-fit:contain;
   filter:drop-shadow(0 32px 64px rgba(0,0,0,.18));
   position:relative;z-index:1;
@@ -325,14 +325,24 @@ h2{font-size:clamp(32px,4vw,54px);font-weight:800;line-height:1.1;margin-bottom:
 .app-step strong{display:block;font-size:14px;font-weight:700;color:var(--text1);margin-bottom:3px}
 .app-step p{font-size:13px;color:var(--text2);line-height:1.65;margin:0}
 .app-trust-row{display:flex;gap:10px;flex-wrap:wrap}
-.trust-pill{
+.trust-pill,
+.trust-badge{
   padding:6px 14px;
   background:rgba(30,110,140,0.08);
   color:var(--teal);
   border:1px solid rgba(30,110,140,.2);
   border-radius:20px;
   font-size:12px;font-weight:700;letter-spacing:.04em;
+  display:inline-block;
 }
+/* App info right column */
+.app-content{
+  display:flex;flex-direction:column;gap:24px;
+}
+.app-content h2{margin:0}
+.app-step span{font-size:13px;color:var(--text2);line-height:1.65;display:block}
+.app-trust-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px}
+
 
 
 /* ══ WORKFLOW VERTICAL TIMELINE ══ */
@@ -566,7 +576,7 @@ footer{background:var(--text1);color:#fff;padding-top:60px}
   .ceo-layout{grid-template-columns:1fr;max-width:540px;margin:0 auto}
   .app-layout{grid-template-columns:1fr;gap:40px;text-align:center}
   .app-visual{align-items:center}
-  .app-phone-img{max-width:720px}
+  .app-phone-img{max-width:480px}
   .app-trust-row{justify-content:center}
   .demo-metrics{grid-template-columns:1fr 1fr}
 }
@@ -603,7 +613,7 @@ footer{background:var(--text1);color:#fff;padding-top:60px}
   .install-img-grid{grid-template-columns:1fr 1fr;gap:8px}
   .install-img{height:160px}
   .app-layout{grid-template-columns:1fr;gap:32px}
-  .app-phone-img{max-width:480px}
+  .app-phone-img{max-width:360px}
   .app-pay-badges{justify-content:center}
   .app-trust-row{justify-content:center}
   .app-step{text-align:left}
