@@ -3,7 +3,7 @@ backend:
   repo: MevrickNeal/UrbanGaz-websiteforthem
   branch: main
   auth_type: implicit
-  app_id: YOUR_GITHUB_OAUTH_CLIENT_ID_HERE
+  app_id: Ov23liHU8zBxGFV2x1ko
 
 media_folder: "frontend/images"
 public_folder: "/images"
