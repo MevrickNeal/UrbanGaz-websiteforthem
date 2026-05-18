@@ -460,21 +460,25 @@
         </div>
       </div>
       <div class="contact-form-col reveal" data-delay="150">
-        <form class="contact-form glass" id="contactForm">
+        <form class="contact-form glass" id="contactForm" action="https://formsubmit.co/info@urbangaz.com" method="POST">
           <h3>Request a Connection</h3>
           <div class="form-row">
-            <input type="text" placeholder="Full Name" required>
-            <input type="tel" placeholder="Phone Number" required>
+            <input type="text" name="name" placeholder="Full Name" required>
+            <input type="tel" name="phone" placeholder="Phone Number" required>
           </div>
-          <input type="email" placeholder="Email Address">
-          <select>
+          <input type="email" name="email" placeholder="Email Address">
+          <select name="connection_type">
             <option value="">Connection Type</option>
             <option>Residential — Single Flat</option>
             <option>Residential — Building</option>
             <option>Commercial</option>
             <option>Industrial</option>
           </select>
-          <textarea placeholder="Address or additional notes..." rows="3"></textarea>
+          <textarea name="message" placeholder="Address or additional notes..." rows="3"></textarea>
+          
+          <input type="hidden" name="_captcha" value="false">
+          <input type="hidden" name="_subject" value="New Connection Request - Urban Gaz">
+          
           <button type="submit" class="btn-primary btn-full">Submit Request &rarr;</button>
         </form>
       </div>
