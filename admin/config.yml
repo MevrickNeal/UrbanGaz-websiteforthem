@@ -1,0 +1,40 @@
+backend:
+  name: github
+  repo: MevrickNeal/UrbanGaz-websiteforthem
+  branch: main
+  auth_type: implicit
+  app_id: YOUR_GITHUB_OAUTH_CLIENT_ID_HERE
+
+media_folder: "frontend/images"
+public_folder: "/images"
+
+collections:
+  - name: "site_content"
+    label: "Site Settings"
+    files:
+      - file: "frontend/data/content.json"
+        label: "Website Content"
+        name: "content"
+        fields:
+          - label: "Hero Section"
+            name: "hero"
+            widget: "object"
+            fields:
+              - {label: "Title", name: "title", widget: "string"}
+              - {label: "Subtitle", name: "subtitle", widget: "text"}
+          
+          - label: "BERC Notice"
+            name: "berc_notice"
+            widget: "object"
+            fields:
+              - {label: "Text", name: "text", widget: "text"}
+
+          - label: "Contact Details"
+            name: "contact"
+            widget: "object"
+            fields:
+              - {label: "Office Address", name: "address", widget: "string"}
+              - {label: "Phone Number", name: "phone", widget: "string"}
+              - {label: "WhatsApp Number", name: "whatsapp", widget: "string"}
+              - {label: "Info Email", name: "email_info", widget: "string"}
+              - {label: "Tech Email", name: "email_tech", widget: "string"}

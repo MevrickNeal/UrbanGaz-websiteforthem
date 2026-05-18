@@ -277,3 +277,52 @@ adminLogin && adminLogin.addEventListener('click', () => {
     });
   });
 })();
+
+// ── CMS DATA SYNC ──────────────────────────────────────
+(async function initCMSData() {
+  try {
+    const res = await fetch('data/content.json');
+    if (!res.ok) return;
+    const cms = await res.json();
+    
+    // Helper to safely set text content if elements exist
+    const setTexts = (selector, text) => {
+      if(!text) return;
+      document.querySelectorAll(selector).forEach(el => el.innerHTML = text.replace(/\n/g, '<br>'));
+    };
+    
+    if (cms.hero) {
+      setTexts('#hero h1', cms.hero.title);
+      setTexts('#hero p.hero-en', cms.hero.subtitle);
+    }
+    if (cms.berc_notice) {
+      setTexts('.berc-notice .berc-text strong:first-child', 'BERC Verified Notice:');
+      const noticeSpan = document.querySelector('.berc-notice .berc-text');
+      if (noticeSpan) noticeSpan.innerHTML = `<strong>BERC Verified Notice:</strong> ${cms.berc_notice.text}`;
+    }
+    if (cms.contact) {
+      // Find all address fields
+      document.querySelectorAll('a[href^="https://maps"]').forEach(el => {
+        if (el.textContent.includes('Shanti Niketan') || el.textContent.includes('Dhaka')) {
+          el.textContent = cms.contact.address;
+        }
+      });
+      // Find phone fields
+      document.querySelectorAll('a[href^="tel:"]').forEach(el => {
+        el.textContent = cms.contact.phone;
+        el.href = 'tel:' + cms.contact.phone.replace(/\s+/g, '');
+      });
+      // Find email fields
+      document.querySelectorAll('a[href^="mailto:info"]').forEach(el => {
+        el.textContent = cms.contact.email_info;
+        el.href = 'mailto:' + cms.contact.email_info;
+      });
+      document.querySelectorAll('a[href^="mailto:lian"]').forEach(el => {
+        el.textContent = cms.contact.email_tech;
+        el.href = 'mailto:' + cms.contact.email_tech;
+      });
+    }
+  } catch(e) {
+    console.log('CMS data not loaded (expected if running locally without server).');
+  }
+})();

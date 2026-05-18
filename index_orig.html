@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Urban Gaz Limited | Professional Smart Gas Solutions</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Leaflet Map -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.css" />
+    <script src="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.js"></script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;900&family=Hind+Siliguri:wght@300;400;500;600;700&display=swap');
+        
+        :root {
+            --brand-orange: #f97316;
+            --brand-yellow: #fbbf24;
+            --brand-dark: #0f172a;
+        }
+
+        body { font-family: 'Hind Siliguri', 'Inter', sans-serif; scroll-behavior: smooth; overflow-x: hidden; background-color: #ffffff; }
+        
+        .glass { background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(16px); border: 1px solid rgba(255, 255, 255, 0.5); }
+        .hero-overlay { background: linear-gradient(to right, rgba(0, 0, 0, 0.95) 0%, rgba(0, 0, 0, 0.7) 40%, rgba(0, 0, 0, 0.2) 100%); }
+        .orange-gradient { background: linear-gradient(135deg, #f97316 0%, #fbbf24 100%); }
+
+        .ticker-wrap { background: #000; overflow: hidden; white-space: nowrap; }
+        .ticker-move { display: inline-block; animation: ticker 45s linear infinite; }
+        @keyframes ticker { 0% { transform: translateX(100%); } 100% { transform: translateX(-100%); } }
+
+        /* Vertical Connector Line for "Work With Us" */
+        .vertical-line {
+            position: absolute;
+            left: 20px;
+            top: 0;
+            bottom: 0;
+            width: 4px;
+            border-left: 4px dotted var(--brand-yellow);
+            z-index: 0;
+            opacity: 0.4;
+        }
+        @media (min-width: 1024px) {
+            .vertical-line { left: 50%; transform: translateX(-50%); opacity: 0.6; }
+        }
+
+        #leafletMap { height: 400px; width: 100%; border-radius: 1.5rem; z-index: 10; border: 4px solid white; box-shadow: 0 10px 30px -10px rgb(0 0 0 / 0.1); }
+        @media (min-width: 768px) { #leafletMap { height: 600px; border-radius: 2.5rem; border-width: 10px; } }
+
+        .dot-marker { background: var(--brand-orange); border: 2px solid white; width: 14px; height: 14px; border-radius: 50%; box-shadow: 0 2px 6px rgba(0,0,0,0.3); }
+        .live-marker { background: #22c55e; border: 2px solid white; width: 18px; height: 18px; border-radius: 50%; animation: pulse-green 2s infinite; }
+        @keyframes pulse-green { 0% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7); } 70% { box-shadow: 0 0 0 12px rgba(34, 197, 94, 0); } 100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); } }
+
+        .active-view { display: block !important; }
+        .hidden-view { display: none !important; }
+        
+        .hover-scale { transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        .hover-scale:hover { transform: translateY(-8px); }
+
+        .container { max-width: 1400px; }
+    </style>
+</head>
+<body class="bg-white">
+
+    <!-- Global Header -->
+    <header class="bg-slate-950 text-white py-2 px-4 md:px-6 flex justify-between items-center z-[100] relative border-b border-white/5">
+        <div class="flex items-center gap-2 md:gap-4">
+            <span class="font-black text-orange-500 uppercase tracking-tighter text-[9px] md:text-xs animate-pulse">● Official Portal</span>
+        </div>
+        <div class="flex items-center gap-4">
+            <div class="flex items-center gap-2">
+                <span class="text-slate-400 font-bold uppercase text-[9px] md:text-[10px]">Today's Rate:</span>
+                <span class="text-yellow-400 font-black text-xs md:text-lg" id="headerGasRateDisplay">235.00 BDT/Kg</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- Navigation -->
+    <nav class="sticky top-0 z-50 bg-white/95 backdrop-blur-md shadow-lg border-b border-slate-100">
+        <div class="container mx-auto px-4 md:px-6 py-3 md:py-4 flex justify-between items-center">
+            <div class="flex items-center gap-4 cursor-pointer" onclick="switchView('home')">
+                <img src="UGL logo.jpeg" alt="Urban Gaz" class="h-10 md:h-16" onerror="this.src='https://via.placeholder.com/150?text=UGL+Logo'">
+            </div>
+            
+            <div class="flex items-center gap-3 md:gap-10 font-bold text-slate-600 text-xs md:text-sm">
+                <button onclick="switchView('home')" class="hover:text-orange-600 transition hidden sm:block">হোম</button>
+                <button onclick="switchView('tracking')" class="bg-emerald-500 hover:bg-emerald-600 text-white px-4 md:px-6 py-2 md:py-2.5 rounded-xl flex items-center gap-2 shadow-lg shadow-emerald-500/20 transition transform hover:scale-105 active:scale-95">
+                    <i data-lucide="map" class="w-4 h-4 md:w-5 md:h-5"></i> <span class="hidden md:inline uppercase tracking-widest text-[10px] md:text-xs">Live Network</span>
+                </button>
+                <button onclick="switchView('login')" class="flex items-center gap-2 text-slate-400 hover:text-orange-600 transition group">
+                    <i data-lucide="lock" class="w-4 h-4 md:w-5 md:h-5 group-hover:rotate-12 transition"></i> <span class="hidden md:inline uppercase tracking-widest text-[10px]">Admin</span>
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Floating Ticker -->
+    <div class="ticker-wrap py-2 text-white/90 font-bold text-[9px] md:text-[11px] uppercase tracking-widest border-b border-white/5">
+        <div class="ticker-move" id="liveTickerText">
+            Serving 487+ Active Users with Urban Gaz Smart Management &nbsp; • &nbsp; 
+            Current Gas Price: 235.00 BDT/Kg &nbsp; • &nbsp; 
+            Live Pipeline Installation Active in Khilkhet & Bashundhara &nbsp; • &nbsp; 
+            24/7 Operations Team direct supervision ensured &nbsp; • &nbsp;
+        </div>
+    </div>
+
+    <main>
+        
+        <!-- HOME VIEW -->
+        <div id="view-home" class="active-view">
+            
+            <!-- Hero -->
+            <section class="relative min-h-[70vh] md:min-h-[90vh] flex items-center overflow-hidden">
+                <img src="1764078247771.jpeg" alt="Hero" class="absolute inset-0 w-full h-full object-cover">
+                <div class="absolute inset-0 hero-overlay"></div>
+                <div class="container mx-auto px-4 md:px-6 relative z-10 pt-10 md:pt-20">
+                    <div class="max-w-4xl text-white">
+                        <div class="inline-flex items-center gap-3 bg-orange-600/30 backdrop-blur-xl border border-orange-500/40 px-4 md:px-6 py-2 md:py-2.5 rounded-full text-yellow-400 text-[10px] md:text-sm font-black mb-6 md:mb-10 tracking-widest shadow-xl">
+                            <i data-lucide="shield-check" class="w-4 h-4 md:w-5 md:h-5"></i> GOVERNMENT FIXED RATES
+                        </div>
+                        <h1 class="text-4xl md:text-[7.5rem] font-black mb-6 md:mb-10 leading-[1] tracking-tighter drop-shadow-2xl">
+                            গ্যাস নিয়ে আর কোনো <br /><span class="text-orange-500">টেনশন নেই!</span>
+                        </h1>
+                        <p class="text-lg md:text-3xl text-slate-100 mb-10 md:mb-14 leading-relaxed max-w-2xl drop-shadow-md">
+                            Smart IoT distribution managed by expert engineering teams. 24/7 surety for your home.
+                        </p>
+                        <div class="flex flex-wrap gap-4 md:gap-8">
+                            <button onclick="document.getElementById('monthly-poster').scrollIntoView()" class="orange-gradient text-white px-8 md:px-14 py-4 md:py-6 rounded-2xl md:rounded-3xl font-black text-base md:text-xl shadow-2xl transition-all hover:scale-105 active:scale-95 uppercase">Check Rates</button>
+                            <button onclick="switchView('tracking')" class="bg-white/10 backdrop-blur-xl border border-white/40 text-white px-8 md:px-14 py-4 md:py-6 rounded-2xl md:rounded-3xl font-black text-base md:text-xl hover:bg-white/20 transition-all uppercase">Live Map</button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- GAS PRICE UPDATE POSTER SECTION -->
+            <section id="monthly-poster" class="py-20 bg-slate-50">
+                <div class="container mx-auto px-4 md:px-6 text-center">
+                    <div class="mb-16">
+                        <h2 class="text-4xl md:text-6xl font-black text-slate-900 mb-4 tracking-tighter uppercase">LPG Gas Price Update</h2>
+                        <p class="text-orange-500 font-bold uppercase tracking-widest text-xs md:text-sm">Official Monthly Rate Announcement</p>
+                    </div>
+                    <!-- Direct Reference to post.jpg for performance -->
+                    <div class="max-w-4xl mx-auto bg-white p-4 md:p-8 rounded-[3rem] shadow-2xl border-4 border-white overflow-hidden group relative">
+                        <img id="publicGasPoster" src="post.jpg" alt="Monthly Gas Rate Poster" class="w-full h-auto rounded-2xl md:rounded-[2rem] shadow-lg transition duration-700 group-hover:scale-[1.01]" onerror="this.src='WhatsApp Image 2026-02-04 at 15.33.14.jpeg'">
+                        <div class="mt-8 flex flex-col md:flex-row justify-between items-center gap-4 text-slate-400 font-bold uppercase text-[10px] md:text-xs tracking-widest px-4">
+                            <span>Government Regulated Rates</span>
+                            <span id="posterUpdateTimestamp">Auto-Synced with GitHub</span>
+                            <span>Urban Gaz Ltd.</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- IoT INTEGRATION SECTION -->
+            <section class="py-24 bg-white overflow-hidden">
+                <div class="container mx-auto px-6">
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
+                        <div>
+                            <div class="inline-flex items-center gap-2 bg-emerald-50 text-emerald-600 px-4 py-2 rounded-full text-xs font-bold mb-6 tracking-widest border border-emerald-100">
+                                <i data-lucide="cpu" class="w-4 h-4"></i> ADVANCED TECHNOLOGY
+                            </div>
+                            <h2 class="text-4xl md:text-6xl font-black text-slate-900 mb-8 leading-tight tracking-tighter uppercase">Patented IoT <br/>Integration</h2>
+                            <p class="text-slate-600 text-lg md:text-xl leading-relaxed mb-10">
+                                We utilize industrial-grade IoT sensors and shared-asset tracking to monitor consumption in real-time. This integration ensures a smooth, leak-proof, and uninterrupted service that adapts to high-demand urban cycles.
+                                <br/><br/>
+                                <span class="italic text-slate-400">আমাদের পেটেন্ট করা আইওটি সিস্টেম রিয়েল-টাইমে গ্যাসের ব্যবহার এবং চাপ পর্যবেক্ষণ করে, যা গ্রাহকদের জন্য ১০০% নিরাপদ এবং নিরবচ্ছিন্ন সেবা নিশ্চিত করে।</span>
+                            </p>
+                            <div class="grid grid-cols-2 gap-6">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center text-orange-600"><i data-lucide="activity"></i></div>
+                                    <span class="font-bold text-sm text-slate-700">Real-time Analytics</span>
+                                </div>
+                                <div class="flex items-center gap-3">
+                                    <div class="w-10 h-10 bg-emerald-100 rounded-lg flex items-center justify-center text-emerald-600"><i data-lucide="shield-check"></i></div>
+                                    <span class="font-bold text-sm text-slate-700">Leak Detection</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="relative">
+                            <img src="1765723874518.jpeg" class="rounded-[3rem] shadow-3xl" alt="IoT Control">
+                            <div class="absolute top-10 -right-6 glass p-8 rounded-3xl shadow-xl border border-white max-w-[200px] hidden md:block">
+                                <div class="text-4xl font-black text-orange-500 mb-2">0.1s</div>
+                                <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest leading-tight">Latency for automated shutoff safety</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- SMART BILLING SECTION -->
+            <section class="py-24 bg-slate-50">
+                <div class="container mx-auto px-6 text-center">
+                    <div class="max-w-4xl mx-auto">
+                        <div class="w-20 h-20 bg-blue-600 rounded-3xl shadow-xl flex items-center justify-center text-white mx-auto mb-10">
+                            <i data-lucide="smartphone" class="w-10 h-10"></i>
+                        </div>
+                        <h2 class="text-4xl md:text-6xl font-black text-slate-900 mb-8 tracking-tighter uppercase">Autonomous Smart Billing</h2>
+                        <p class="text-slate-600 text-xl md:text-2xl leading-relaxed mb-12">
+                            Forget about physical bills or manual meter reading. Our system automatically processes your usage and delivers the monthly bill directly to your phone via SMS and Portal.
+                            <br/><br/>
+                            <span class="text-slate-400 font-bold italic">অটোনোমাস স্মার্ট বিলিং ব্যবস্থার মাধ্যমে গ্রাহকরা সরাসরি তাদের ফোনে বিল পাবেন। অনলাইন পেমেন্ট ফিচারের মাধ্যমে বিল পরিশোধ করা এখন আরও সহজ।</span>
+                        </p>
+                        <div class="flex flex-wrap justify-center gap-8">
+                            <div class="bg-white p-8 rounded-3xl shadow-sm border border-slate-100 flex flex-col items-center min-w-[180px]">
+                                <i data-lucide="file-text" class="text-blue-500 mb-4"></i>
+                                <span class="font-black text-slate-800">Digital Receipts</span>
+                            </div>
+                            <div class="bg-white p-8 rounded-3xl shadow-sm border border-slate-100 flex flex-col items-center min-w-[180px]">
+                                <i data-lucide="credit-card" class="text-emerald-500 mb-4"></i>
+                                <span class="font-black text-slate-800">Direct Pay</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Market Insights Cards -->
+            <section class="py-12 md:py-24 bg-white">
+                <div class="container mx-auto px-4 md:px-6">
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-10">
+                        <div class="p-8 md:p-12 rounded-[2.5rem] md:rounded-[3.5rem] bg-orange-50 border border-orange-100 hover-scale shadow-sm">
+                            <div class="text-orange-600 font-black text-5xl md:text-6xl mb-4">487+</div>
+                            <h4 class="text-lg md:text-xl font-black text-slate-800 uppercase tracking-tighter mb-2">Active Users: Dhaka</h4>
+                            <p class="text-slate-500 text-xs md:text-sm">Real-time households managed in the capital.</p>
+                        </div>
+                        <div class="p-8 md:p-12 rounded-[2.5rem] md:rounded-[3.5rem] bg-yellow-50 border border-yellow-100 hover-scale shadow-sm">
+                            <div class="text-orange-600 font-black text-5xl md:text-6xl mb-4">NEW</div>
+                            <h4 class="text-lg md:text-xl font-black text-slate-800 uppercase tracking-tighter mb-2">Expansion: Mymensingh</h4>
+                            <p class="text-slate-500 text-xs md:text-sm">Site assessment and pipeline planning underway.</p>
+                        </div>
+                        <div class="p-8 md:p-12 rounded-[2.5rem] md:rounded-[3.5rem] bg-slate-900 text-white hover-scale shadow-2xl">
+                            <div class="text-yellow-400 font-black text-5xl md:text-6xl mb-4">24/7</div>
+                            <h4 class="text-lg md:text-xl font-black uppercase tracking-tighter mb-2">Eng. Support</h4>
+                            <p class="text-slate-400 text-xs md:text-sm">Direct supervision by operations engineers.</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Work With Us Vertical Journey -->
+            <section id="work-with-us" class="py-20 md:py-32 bg-slate-50 relative overflow-hidden">
+                <div class="vertical-line"></div>
+                <div class="container mx-auto px-4 md:px-6 relative z-10">
+                    <div class="text-center mb-20 md:mb-32">
+                        <h2 class="text-4xl md:text-7xl font-black text-slate-900 mb-4 md:mb-6 uppercase tracking-tighter">সেবা গ্রহণ প্রক্রিয়া</h2>
+                        <p class="text-orange-500 font-bold uppercase tracking-[0.2em] md:tracking-[0.4em] text-[10px] md:text-sm">Professional Workflow & Service Journey</p>
+                    </div>
+                    <div id="vertical-steps-container"></div>
+                </div>
+            </section>
+
+            <!-- Live Pipe Installation Gallery -->
+            <section class="py-20 md:py-32 bg-white">
+                <div class="container mx-auto px-4 md:px-6 text-center mb-16 md:mb-24">
+                    <h2 class="text-4xl md:text-6xl font-black text-slate-900 mb-4 tracking-tighter uppercase">LIVE PIPE INSTALLATION</h2>
+                    <div class="w-20 md:w-24 h-2 bg-orange-500 mx-auto rounded-full"></div>
+                </div>
+                <div class="container mx-auto px-4 md:px-6 space-y-24 md:space-y-32">
+                    <div class="grid grid-cols-1 lg:grid-cols-12 gap-10 md:gap-16 items-center">
+                        <div class="lg:col-span-7 h-[400px] md:h-[600px] lg:h-[700px]">
+                            <img src="WhatsApp Image 2026-02-03 at 12.33.31.jpeg" class="w-full h-full object-cover rounded-3xl md:rounded-[3rem] shadow-3xl" onerror="this.src='https://via.placeholder.com/800x600?text=Project+1'">
+                        </div>
+                        <div class="lg:col-span-5">
+                            <span class="text-orange-500 font-black tracking-widest block mb-4 uppercase text-sm">Project Site: 01</span>
+                            <h3 class="text-3xl md:text-4xl font-black mb-6 md:mb-8 leading-tight">Multi-Meter Residential Grid</h3>
+                            <p class="text-slate-500 text-lg md:text-xl leading-relaxed mb-6">প্রতিটি সংযোগ আধুনিক মানের এবং লিকেজ মুক্ত। দক্ষ ইঞ্জিনিয়ারদের সরাসরি তত্ত্বাবধানে পাইপলাইন গ্রিড স্থাপন কাজ।</p>
+                            <p class="text-slate-400 italic text-base md:text-lg border-l-4 border-yellow-400 pl-6">Ensuring leak-proof and smart-meter ready connections. Managed by senior engineers.</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- CEO Profile -->
+            <section id="about" class="py-20 md:py-32 bg-slate-950 text-white relative">
+                <div class="container mx-auto px-4 md:px-6 grid grid-cols-1 lg:grid-cols-2 gap-16 md:gap-24 items-center">
+                    <div class="relative">
+                        <!-- Direct Link to Ronyvai.jpg -->
+                        <img src="Ronyvai.jpg" alt="KHAIRUL ALAM - CEO Urban Gaz" class="rounded-3xl md:rounded-[4rem] shadow-2xl border-4 border-white/10 grayscale hover:grayscale-0 transition duration-1000 w-full" onerror="this.src='https://via.placeholder.com/600x600?text=CEO+Urban+Gaz'">
+                        <div class="absolute -bottom-6 -right-4 md:-bottom-10 md:-right-10 bg-orange-600 p-6 md:p-12 rounded-2xl md:rounded-[3rem] shadow-2xl">
+                            <h4 class="text-xl md:text-3xl font-black mb-1">CEO</h4>
+                            <p class="text-yellow-300 font-bold uppercase tracking-widest text-[10px] md:text-sm">Urban Gaz Limited</p>
+                        </div>
+                    </div>
+                    <div>
+                        <h2 class="text-3xl md:text-5xl font-black mb-6 md:mb-10 leading-tight tracking-tighter text-white">Energy Transition Through Real-Time Data</h2>
+                        <div class="space-y-4 md:space-y-6 text-slate-300 text-base md:text-lg leading-relaxed">
+                            <p>Bangladesh accumulates 8th largest population in a small land area. Transmission based energy flow is turning to vehicular distribution centric energy sector.</p>
+                            <p>At Urban Gaz, we’re tackling challenges with patented services by offering real-time data on consumption and strategic distribution to make clean energy more affordable.</p>
+                        </div>
+                        <div class="mt-8 md:mt-12">
+                            <a href="https://www.linkedin.com/company/urban-gaz/" target="_blank" class="bg-blue-600 text-white px-6 md:px-8 py-3 md:py-4 rounded-xl md:rounded-2xl font-black flex items-center gap-3 hover:bg-blue-700 transition w-fit">
+                                <i data-lucide="linkedin"></i> LINKEDIN PROFILE
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+        </div>
+
+        <!-- TRACKING VIEW -->
+        <div id="view-tracking" class="hidden-view min-h-screen bg-slate-100 pb-20">
+            <div class="bg-white border-b border-slate-200 px-4 md:px-10 py-6 flex justify-between items-center shadow-sm">
+                <h1 class="font-black text-slate-800 text-xl md:text-2xl uppercase tracking-tighter">Live Network Tracking</h1>
+                <div class="flex items-center gap-2 text-[10px] md:text-sm font-bold text-emerald-600 bg-emerald-50 px-4 py-2 rounded-full border border-emerald-100">
+                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span> ONLINE
+                </div>
+            </div>
+            <div class="container mx-auto px-4 md:px-10 mt-10">
+                <div class="bg-white p-6 rounded-[2.5rem] shadow-xl mb-10 grid grid-cols-1 md:grid-cols-3 gap-6 items-end">
+                    <div>
+                        <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Zone Filter</label>
+                        <select id="mapAreaFilter" onchange="refreshMapState()" class="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 font-bold outline-none focus:border-orange-500 transition">
+                            <option value="all">All Service Zones</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Tracking ID</label>
+                        <select id="cylinderFilter" onchange="refreshMapState()" class="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 font-bold outline-none focus:border-orange-500 transition">
+                            <option value="">Endpoint ID...</option>
+                        </select>
+                    </div>
+                    <button onclick="refreshMapState()" class="bg-slate-900 text-white py-3 rounded-xl font-black hover:bg-orange-600 transition shadow-lg flex items-center justify-center gap-2 uppercase tracking-widest text-xs">
+                        <i data-lucide="refresh-cw" class="w-4 h-4"></i> Sync
+                    </button>
+                </div>
+                <div id="leafletMap"></div>
+            </div>
+        </div>
+
+        <!-- LOGIN VIEW -->
+        <div id="view-login" class="hidden-view bg-slate-100 min-h-screen flex items-center justify-center p-4">
+            <div class="max-w-md w-full bg-white p-8 md:p-16 rounded-[3rem] shadow-2xl border border-white relative overflow-hidden text-center text-slate-900">
+                <img src="UGL logo.jpeg" alt="Logo" class="h-16 mx-auto mb-10">
+                <h2 class="text-2xl font-black uppercase mb-8 tracking-tighter">Admin Access</h2>
+                <input type="password" id="adminPass" placeholder="Access Code" class="w-full bg-slate-50 border border-slate-100 rounded-2xl px-6 py-5 mb-6 outline-none focus:ring-2 focus:ring-orange-500 text-center text-xl font-bold">
+                <button onclick="handleLogin()" class="w-full orange-gradient text-white py-5 rounded-2xl font-black text-lg shadow-xl uppercase tracking-widest hover:brightness-110 active:scale-95 transition">Login Portal</button>
+                <p id="loginError" class="text-red-500 text-xs font-bold mt-4 hidden tracking-widest uppercase">Unauthorized Entry Attempt</p>
+            </div>
+        </div>
+
+        <!-- ADMIN DASHBOARD -->
+        <div id="view-dashboard" class="hidden-view bg-slate-50 min-h-screen p-4 md:p-12 text-slate-900">
+            <div class="container mx-auto">
+                <div class="flex flex-col md:flex-row justify-between items-center mb-10 gap-4">
+                    <h1 class="text-2xl md:text-3xl font-black uppercase text-slate-900">Operations Hub V8.0</h1>
+                    <button onclick="switchView('home')" class="bg-white border border-slate-200 text-slate-600 px-8 py-3 rounded-full font-black text-sm uppercase shadow-sm">Logout</button>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 md:gap-12">
+                    <!-- Rate Update -->
+                    <div class="bg-white p-8 md:p-12 rounded-[3.5rem] shadow-xl border border-slate-100">
+                        <h2 class="text-2xl font-black mb-8 flex items-center gap-3 uppercase"><i data-lucide="trending-up" class="text-orange-500"></i> Global Rate Update</h2>
+                        <div class="space-y-6">
+                            <input type="number" id="newGasRateInput" placeholder="New BDT/Kg" class="w-full bg-slate-50 border border-slate-100 rounded-2xl px-8 py-6 text-3xl font-black outline-none focus:ring-2 focus:ring-orange-500">
+                            <button onclick="updateGasPrice()" class="w-full bg-slate-900 text-white py-5 rounded-2xl font-black text-lg hover:bg-orange-600 transition uppercase tracking-widest shadow-xl">Submit Rate</button>
+                        </div>
+                    </div>
+
+                    <!-- Poster Management -->
+                    <div class="bg-white p-8 md:p-12 rounded-[3.5rem] shadow-xl border border-slate-100">
+                        <h2 class="text-2xl font-black mb-8 flex items-center gap-3 uppercase text-slate-900"><i data-lucide="image" class="text-orange-500"></i> Local Poster Preview</h2>
+                        <p class="text-xs text-slate-400 mb-6 font-bold uppercase tracking-widest">To update the poster permanently and fast, please replace 'post.jpg' in your GitHub repository. The site is optimized to load that file directly.</p>
+                        <div class="bg-slate-50 p-6 rounded-3xl border border-dashed border-slate-200 text-center">
+                            <i data-lucide="github" class="w-12 h-12 mx-auto mb-4 text-slate-300"></i>
+                            <p class="text-xs font-bold text-slate-400 uppercase tracking-widest leading-loose">
+                                1. Upload new image to GitHub<br/>
+                                2. Name it <span class="text-orange-500">post.jpg</span><br/>
+                                3. Website reflects changes instantly
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- FOOTER -->
+    <footer class="bg-slate-950 text-slate-500 py-20 border-t border-white/5">
+        <div class="container mx-auto px-4 md:px-6 text-white/50">
+            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-12 mb-16 text-slate-400">
+                <div>
+                    <img src="UGL logo.jpeg" alt="Logo" class="h-10 mb-8 brightness-200 grayscale opacity-40">
+                    <div class="flex gap-4">
+                        <a href="https://www.facebook.com/urbangaz" class="hover:text-white"><i data-lucide="facebook" class="w-5 h-5 text-slate-500"></i></a>
+                        <a href="https://www.linkedin.com/company/urban-gaz/" class="hover:text-white"><i data-lucide="linkedin" class="w-5 h-5 text-slate-500"></i></a>
+                    </div>
+                </div>
+                <div>
+                    <h4 class="text-white font-black text-sm mb-6 uppercase tracking-widest">Office</h4>
+                    <p class="text-xs leading-relaxed">360, Lakecity Shopping Complex, Khilkhet, Dhaka - 1229</p>
+                    <p class="text-xs mt-2 font-bold">+880 1958172960</p>
+                </div>
+                <div>
+                    <h4 class="text-white font-black text-sm mb-6 uppercase tracking-widest text-white/90">Expansion</h4>
+                    <p class="text-xs">Dhaka (Active)</p>
+                    <p class="text-xs">Mymensingh (Active)</p>
+                </div>
+                <div>
+                    <h4 class="text-white font-black text-sm mb-6 uppercase tracking-widest">Support</h4>
+                    <a href="mailto:support.urbangaz.com.bd" class="text-orange-500 font-bold hover:underline text-xs">support.urbangaz.com.bd</a>
+                </div>
+            </div>
+            <p class="text-center text-[9px] uppercase font-black tracking-[0.4em] pt-10 border-t border-white/5">&copy; 2026 Urban Gaz Limited. Smart Energy Grid.</p>
+        </div>
+    </footer>
+
+    <!-- Firebase Logic -->
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.1.0/firebase-app.js';
+        import { getAuth, signInAnonymously, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/11.1.0/firebase-auth.js';
+        import { getFirestore, doc, setDoc, onSnapshot } from 'https://www.gstatic.com/firebasejs/11.1.0/firebase-firestore.js';
+
+        const firebaseConfig = JSON.parse(__firebase_config);
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'urban-gaz-portal';
+
+        let currentUser = null;
+        signInAnonymously(auth).then(() => {
+            onAuthStateChanged(auth, (user) => { currentUser = user; });
+        });
+
+        const dataDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'siteData', 'monthlyUpdate');
+
+        onSnapshot(dataDocRef, (snap) => {
+            if(snap.exists()) {
+                const data = snap.data();
+                if(data.rate) {
+                    document.getElementById('headerGasRateDisplay').innerText = `${data.rate} BDT/Kg`;
+                    document.getElementById('liveTickerText').innerHTML = `
+                        Serving 487+ Active Users with Urban Gaz Smart Management &nbsp; • &nbsp; 
+                        Current Gas Price: ${data.rate} BDT/Kg &nbsp; • &nbsp; 
+                        Live Pipeline Installation Active in Khilkhet & Bashundhara &nbsp; • &nbsp; 
+                        24/7 Operations Team direct supervision ensured &nbsp; • &nbsp;
+                    `;
+                }
+                if(data.timestamp) document.getElementById('posterUpdateTimestamp').innerText = `System Update: ${data.timestamp}`;
+            }
+        });
+
+        window.updateGasPrice = async function() {
+            const input = document.getElementById('newGasRateInput');
+            if(!input.value || !currentUser) return;
+            try {
+                await setDoc(dataDocRef, { rate: parseFloat(input.value).toFixed(2), timestamp: new Date().toLocaleString() }, { merge: true });
+                alert("Market rate updated successfully!");
+                input.value = "";
+            } catch(e) { console.error(e); }
+        };
+    </script>
+
+    <script>
+        // UI Logic
+        window.switchView = function(viewId) {
+            const views = ['home', 'tracking', 'login', 'dashboard'];
+            views.forEach(v => {
+                const el = document.getElementById('view-' + v);
+                if (el) {
+                    if (v === viewId) {
+                        el.classList.add('active-view'); el.classList.remove('hidden-view');
+                    } else {
+                        el.classList.add('hidden-view'); el.classList.remove('active-view');
+                    }
+                }
+            });
+            window.scrollTo(0, 0);
+            if(viewId === 'tracking') setTimeout(initMap, 500);
+            lucide.createIcons();
+        };
+
+        const stepsData = [
+            {img: '1765723874208.jpeg', title: 'প্রাথমিক যোগাযোগ', en: 'Initial Contact', desc: 'Contact our hub for assessment scheduling.', side: 'left', num: '01'},
+            {img: '1765723874683.jpeg', title: 'মূল্যায়ন ও যাচাইকরণ', en: 'Audit & Report', desc: 'Technical team evaluates the grid for safety.', side: 'right', num: '02'},
+            {img: '1765723874223.jpeg', title: 'সেবা সক্রিয়করণ', en: 'Activation', desc: 'Digital profile creation and grid connection.', side: 'left', num: '03'},
+            {img: '1765723868520.jpeg', title: 'পূর্ণাঙ্গ সেবা', en: 'Full Service', desc: 'Autonomous refill and smartphone billing active.', side: 'right', num: '04'}
+        ];
+
+        document.getElementById('vertical-steps-container').innerHTML = stepsData.map(s => `
+            <div class="mb-24 md:mb-40 grid grid-cols-1 lg:grid-cols-2 gap-10 items-center">
+                <div class="relative group ml-10 lg:ml-0 ${s.side === 'right' ? 'lg:order-2' : ''}">
+                    <img src="${s.img}" class="rounded-3xl md:rounded-[4rem] shadow-2xl transition duration-700 group-hover:scale-105">
+                    <div class="absolute -top-4 -left-10 md:-top-6 md:-left-6 bg-yellow-400 text-black font-black w-12 h-12 md:w-20 md:h-20 rounded-full flex items-center justify-center text-xl md:text-3xl shadow-xl z-20">${s.num}</div>
+                </div>
+                <div class="p-4 md:p-20 ${s.side === 'right' ? 'lg:order-1 lg:text-right' : ''}">
+                    <h3 class="text-3xl md:text-5xl font-black text-slate-900 mb-4 uppercase tracking-tighter">${s.title}<br/><span class="text-orange-500 text-xl md:text-3xl font-bold">${s.en}</span></h3>
+                    <p class="text-slate-600 text-base md:text-xl leading-relaxed mb-6"><span class="italic text-slate-400 font-medium">${s.desc}</span></p>
+                    <div class="h-1 w-20 bg-yellow-400 ${s.side === 'right' ? 'ml-auto' : ''}"></div>
+                </div>
+            </div>
+        `).join('');
+
+        function handleLogin() {
+            if (document.getElementById('adminPass').value === '1234') {
+                switchView('dashboard');
+            } else {
+                document.getElementById('loginError').classList.remove('hidden');
+            }
+        }
+        window.handleLogin = handleLogin;
+
+        let map = null, markersLayer = null, allMapData = [];
+        const MAP_SCRIPT = "https://script.google.com/macros/s/AKfycbyQFg_J_J2K7XVcT4MyTSDkiWyZBVpqBjLBqON7UZgDVi0dh1a3zwh4LeG7ioq3Uu4/exec";
+
+        function initMap() {
+            if (map) { map.invalidateSize(); return; }
+            map = L.map('leafletMap', {zoomControl: false}).setView([23.8103, 90.4125], 13);
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png').addTo(map);
+            markersLayer = L.layerGroup().addTo(map);
+            L.control.zoom({position: 'bottomright'}).addTo(map);
+            fetchMapData();
+        }
+
+        async function fetchMapData() {
+            try {
+                const res = await fetch(`${MAP_SCRIPT}?action=getMapData`);
+                const data = await res.json();
+                if(data.status === 'success' && data.locations) {
+                    allMapData = data.locations;
+                    const areas = new Set(), cylinders = new Set();
+                    data.locations.forEach(loc => { if(loc.area) areas.add(loc.area); if(loc.id) cylinders.add(loc.id); });
+                    const areaSel = document.getElementById('mapAreaFilter');
+                    const cylSel = document.getElementById('cylinderFilter');
+                    areas.forEach(a => { const opt = document.createElement('option'); opt.value = a; opt.innerText = a; areaSel.appendChild(opt); });
+                    cylinders.forEach(id => { const opt = document.createElement('option'); opt.value = id; opt.innerText = id; cylSel.appendChild(opt); });
+                    refreshMapState();
+                }
+            } catch(e) {}
+        }
+
+        window.refreshMapState = function() {
+            const cylId = document.getElementById('cylinderFilter').value;
+            const area = document.getElementById('mapAreaFilter').value;
+            markersLayer.clearLayers();
+            const filtered = allMapData.filter(l => (cylId ? l.id === cylId : (area === 'all' ? true : l.area === area)));
+            filtered.forEach(loc => {
+                try {
+                    const parts = loc.link.split('q=')[1].split('&')[0].split(',');
+                    L.marker([parseFloat(parts[0]), parseFloat(parts[1])], {icon: L.divIcon({className: 'dot-marker', iconSize: [14, 14]})}).bindPopup(`<b>ID: ${loc.id}</b><br>${loc.area}`).addTo(markersLayer);
+                } catch(e) {}
+            });
+            if(filtered.length > 0) map.fitBounds(new L.featureGroup(markersLayer.getLayers()).getBounds().pad(0.3));
+        };
+
+        window.onload = () => { lucide.createIcons(); }
+    </script>
+</body>
+</html>
