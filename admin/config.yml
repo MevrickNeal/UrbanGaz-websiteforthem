@@ -2,7 +2,7 @@ backend:
   name: github
   repo: MevrickNeal/UrbanGaz-websiteforthem
   branch: main
-  auth_type: implicit
+  auth_type: pkce
   app_id: Ov23liHU8zBxGFV2x1ko
 
 media_folder: "frontend/images"
